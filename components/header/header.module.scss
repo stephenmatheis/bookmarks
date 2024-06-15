@@ -1,0 +1,26 @@
+@use 'styles/utilities';
+
+.header {
+    // text-align: center;
+    width: 100%;
+
+    &.print-only {
+        @media screen {
+            display: none;
+        }
+    }
+
+    a {
+        .text {
+            // @media (hover: hover) {
+            //     &:hover .part {
+            //         @include utilities.shadow-hover;
+            //     }
+            // }
+
+            .title {
+                color: var(--muted);
+            }
+        }
+    }
+}

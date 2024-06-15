@@ -1,0 +1,129 @@
+@use 'styles/utilities';
+
+.tabs {
+    --tabs-background: var(--primary-10);
+    --tabs-inactive-background: var(--background-color);
+    // --border-color: var(--primary-50);
+    --border-color: var(--primary-10);
+    --icon-size: calc(var(--line-height) + 2px);
+
+    margin: calc(var(--line-height) * 3) 0px;
+    border-radius: var(--border-radius);
+
+    .titles-scroll-wrapper {
+        display: flex;
+        justify-content: space-between;
+        border-top: solid 1px var(--border-color);
+        border-left: solid 1px var(--border-color);
+        border-right: solid 1px var(--border-color);
+        border-radius: 6px 6px 0px 0px;
+
+        .titles-toolbar {
+            flex: 2;
+            border-bottom: solid 1px var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+
+            .titles-toolbar-btn {
+                display: grid;
+                place-content: center;
+                height: 100%;
+                padding: 0px 1ch;
+                margin: 2ch;
+                color: var(--primary);
+            }
+        }
+
+        .titles {
+            display: flex;
+            align-items: center;
+            overflow-x: auto;
+            border-radius: 6px 0px 0px 0px;
+
+            @include utilities.hide-scrollbar();
+
+            .title {
+                cursor: pointer;
+                border: none;
+                background-color: var(--tabs-inactive-background);
+                color: var(--muted);
+                padding: 1ch calc(2ch + 2px);
+                height: 100%;
+                display: inline-flex;
+                align-items: center;
+                border-right: solid 1px var(--border-color);
+                border-bottom: solid 1px var(--border-color);
+
+                &.active {
+                    position: relative;
+                    background-color: var(--tabs-background);
+                    color: var(--primary);
+
+                    &::after {
+                        content: '';
+                        position: absolute;
+                        top: 1px;
+                        left: 0px;
+                        background-color: transparent;
+                        height: 100%;
+                        width: 100%;
+                        box-shadow: inset 0 -1px 0 0 var(--tabs-background),
+                            inset 0 -1px 0 0 var(--background-color);
+                    }
+
+                    svg {
+                        fill: var(--primary);
+                    }
+                }
+
+                &:first-child {
+                    border-radius: 6px 0px 0px 0px;
+                }
+
+                svg,
+                span {
+                    padding-right: 0.5ch;
+                    width: auto;
+                    min-width: calc(var(--font-size) + 8px);
+                }
+
+                span {
+                    font-weight: 600;
+
+                    &.text {
+                        font-size: calc(var(--font-size) - 2px);
+                    }
+                }
+
+                svg {
+                    height: var(--icon-size);
+                    width: var(--icon-size);
+                    fill: var(--muted);
+                }
+            }
+        }
+    }
+
+    .tab {
+        background-color: var(--primary-10);
+        border-right: solid 1px var(--border-color);
+        border-left: solid 1px var(--border-color);
+        border-bottom: solid 1px var(--border-color);
+        border-radius: 0px 0px 6px 6px;
+        // max-height: 70svh;
+        // overflow: auto;
+
+        [data-rehype-pretty-code-fragment] {
+            margin-bottom: 0px;
+
+            pre {
+                border: none;
+            }
+        }
+
+        [data-copy-code-btn] {
+            display: none;
+        }
+    }
+}

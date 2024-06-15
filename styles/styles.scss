@@ -1,0 +1,345 @@
+@use 'utilities';
+
+:root {
+    --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol';
+    --font-monospace: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        Liberation Mono, 'Courier New', monospace;
+    --font-family: var(--font-monospace);
+    --font-print: var(--font-monospace);
+
+    @media print {
+        --font-family: var(--font-print);
+        --font-size: 11px;
+        --line-height: 16px;
+    }
+
+    @include utilities.init-themes();
+
+    br[data-header-break] {
+        display: none;
+    }
+}
+
+* {
+    box-sizing: border-box;
+    font-size: var(--font-size);
+    line-height: var(--line-height);
+
+    &::selection {
+        color: var(--primary);
+        background-color: var(--primary-20);
+    }
+}
+
+html {
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--color);
+    -webkit-text-size-adjust: 100%;
+
+    &[data-prefers-color-scheme='Dark'] {
+        body {
+            &.modal-open {
+                [data-backdrop] {
+                    --filter: blur(4px) brightness(1.5);
+                }
+            }
+        }
+    }
+
+    @media (prefers-color-scheme: dark), (prefers-color-scheme: no-preference) {
+        body {
+            &.modal-open {
+                [data-backdrop] {
+                    --filter: blur(4px) brightness(1.5);
+                }
+            }
+        }
+    }
+}
+
+body {
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+
+    &.can-transition {
+        transition: color var(--prefers-color-scheme-transition-speed) ease 0s,
+            background-color var(--prefers-color-scheme-transition-speed) ease
+                0s,
+            filter var(--prefers-color-scheme-transition-speed) ease 0s;
+    }
+
+    &.modal-open {
+        overflow: hidden;
+    }
+}
+
+a {
+    position: relative;
+    color: var(--primary);
+    -webkit-tap-highlight-color: transparent;
+
+    @media (pointer: coarse) {
+        &:active {
+            border-radius: 1px;
+            background-color: var(--primary-10);
+            box-shadow: 0px 0px 0px 4px var(--primary-10);
+        }
+    }
+
+    @media (hover: hover) {
+        &:hover {
+            @include utilities.shadow-hover;
+        }
+    }
+
+    &.anchor {
+        display: block;
+
+        &:hover {
+            * {
+                color: var(--primary);
+            }
+        }
+
+        * {
+            transition: color 150ms ease-in-out;
+        }
+    }
+
+    &,
+    &:hover {
+        text-decoration: none;
+
+        .anchor-link {
+            opacity: 1;
+        }
+    }
+
+    .anchor-link {
+        position: absolute;
+        bottom: 0px;
+        left: -2ch;
+        color: var(--primary);
+        opacity: 0;
+        transition: opacity 150ms ease-in-out;
+    }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: normal;
+    color: var(--primary);
+}
+
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin-top: calc(var(--line-height) * 2);
+    margin-bottom: var(--line-height);
+}
+
+p,
+li {
+    line-height: calc(var(--line-height) * var(--p-line-height-modifier));
+}
+
+p {
+    margin-top: 0px;
+    margin-bottom: var(--line-height);
+}
+
+article {
+    --theme-color: var(--primary);
+
+    .date {
+        display: inline-block;
+        margin-bottom: 0px;
+    }
+
+    p {
+        &:first-of-type {
+            margin-top: var(--line-height);
+        }
+    }
+
+    ul,
+    ol {
+        padding-left: 2ch;
+        margin: var(--line-height) 0px;
+
+        li {
+            &::marker {
+                color: var(--theme-color);
+            }
+        }
+    }
+
+    ol {
+        list-style-position: inside;
+    }
+
+    ul {
+        list-style: inside square;
+    }
+
+    blockquote {
+        // 🚫 Heading
+        border-left: 2px solid var(--theme-color);
+
+        // ✅ Link
+        // background: var(--primary-15);
+        // border-left: 10px solid var(--primary);
+
+        margin: calc(var(--line-height) * 2) 1ch;
+        padding-left: 2ch;
+
+        p {
+            color: var(--theme-color);
+            margin-top: 0px !important;
+        }
+    }
+}
+
+button {
+    font-family: var(--font-family);
+}
+
+// Inline code block
+p {
+    code {
+        font-family: var(--font-monospace);
+        padding: 0.125ch 0.25ch;
+        background-color: var(--primary-20);
+        color: var(--primary);
+    }
+}
+
+// Code block
+[data-rehype-pretty-code-fragment] {
+    --background: var(--primary-10);
+    --hightlighted-background: var(--primary-15);
+    --title-background: var(--primary-20);
+    --highlighted-border-color: var(--primary);
+
+    position: relative;
+    margin-bottom: calc(var(--line-height) * 1);
+
+    [data-rehype-pretty-code-title] {
+        background: var(--title-background);
+        line-height: 30px;
+        padding: 0px 2ch;
+    }
+
+    pre {
+        font-weight: 400;
+        margin: 0px;
+        opacity: 0.98;
+        background: var(--background);
+        border: solid 1px var(--border-color);
+        border-radius: 6px;
+
+        & > code {
+            // Shiki
+            --shiki-color-background: var(--primary-10);
+            --shiki-token-keyword: var(--primary);
+            --shiki-color-text: var(--color);
+            --shiki-token-punctuation: var(--color);
+            --shiki-token-string: var(--color);
+            --shiki-token-parameter: var(--color);
+            --shiki-token-link: var(--color);
+            --shiki-token-string-expression: var(--token-string-expression);
+            --shiki-token-function: var(--token-function);
+            --shiki-token-constant: var(--token-constant);
+            --shiki-token-comment: var(--token-comment);
+
+            display: grid;
+            font-family: var(--font-monospace);
+            padding: var(--line-height) 0px;
+            overflow-x: auto;
+
+            // Line numbers
+            &[data-line-numbers] {
+                counter-reset: line;
+
+                > .line::before {
+                    counter-increment: line;
+                    content: counter(line);
+
+                    // Other styling
+                    display: inline-block;
+                    width: 1rem;
+                    margin-right: 2rem;
+                    text-align: right;
+                    color: gray;
+                }
+
+                // Line numbers
+                .line &[data-line-numbers-max-digits='2'] > .line::before {
+                    width: 2rem;
+                }
+
+                .line &[data-line-numbers-max-digits='3'] > .line::before {
+                    width: 3rem;
+                }
+            }
+
+            // Line
+            > .line {
+                padding: 0px 2ch;
+                border-left: 2px solid transparent;
+
+                // Highlight line
+                &.highlighted {
+                    background: var(--hightlighted-background);
+                    border-left-color: var(--highlighted-border-color);
+                }
+
+                &::selection,
+                & *::selection {
+                    color: inherit;
+                    background: var(--primary-30);
+                }
+            }
+
+            // Highlight word
+            .word {
+                --background-color: var(--word-background-color);
+
+                border-top: solid 3px var(--background-color);
+                border-bottom: solid 3px var(--background-color);
+                background-color: var(--background-color);
+
+                &[data-word-id='r'] {
+                    --background-color: var(--r-word-background-color);
+                }
+
+                &[data-word-id='g'] {
+                    --background-color: var(--g-word-background-color);
+                }
+
+                &[data-word-id='b'] {
+                    --background-color: var(--b-word-background-color);
+                }
+            }
+        }
+    }
+}
+
+// Classes
+.muted {
+    color: var(--muted);
+}
+
+.color {
+    color: var(--color);
+}

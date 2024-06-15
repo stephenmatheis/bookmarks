@@ -1,0 +1,224 @@
+@use 'sass:map';
+@use 'sass:string';
+@use 'styles/themes.module.scss' as themes;
+
+// Globals
+$default: themes.$default;
+$themes: themes.$themes;
+$defaultMode: themes.$defaultMode;
+$defaultDarkBackgroundColor: themes.$defaultDarkBackgroundColor;
+$defaultLightBackgroundColor: themes.$defaultLightBackgroundColor;
+$font-size: 12px;
+$line-height: 18px;
+$offset: 13px;
+$p-line-height-modifier: 1.25;
+$page-padding: calc($line-height * 7) 0.5in calc($line-height * 2);
+$page-gap: calc($line-height * 5);
+$small-width: 500px;
+$medium-width: 1024px;
+$large-width: 1025px;
+$max-width: 680px;
+$medium-height: 725px;
+$border-radius: 6px;
+
+@mixin hide-scrollbar() {
+    /* Chrome, Safari, and Opera */
+    &::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* IE, Edge (Legacy), and Firefox */
+    & {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
+    }
+}
+
+@mixin shadow-hover {
+    border-radius: 1px;
+    background-color: var(--primary-10);
+    box-shadow: 0px 0px 0px 4px var(--primary-10);
+}
+
+@mixin defaultColor($prefix, $variableName, $value, $mode, $options) {
+    @if $value {
+        --#{$prefix}#{$variableName}: #{$value};
+        --toggle-#{$variableName}-string: '#{$value}';
+    } @else {
+        --#{$prefix}#{$variableName}: #{map.get($options, $mode)};
+        --toggle-#{$variableName}-string: '#{map.get($options, $mode)}';
+    }
+}
+
+@mixin create-theme(
+    $type,
+    $prefix,
+    $mode,
+    $primary,
+    $accent,
+    $token-string-expression,
+    $token-function,
+    $token-constant,
+    $token-comment,
+    $background-color: null,
+    $text-shadow-color: null,
+    $color: null,
+    $muted: null
+) {
+    $gradients: (
+        ('05', 99%),
+        ('10', 95%),
+        ('15', 90%),
+        ('20', 85%),
+        ('30', 80%),
+        ('50', 50%),
+        ('90', 25%)
+    );
+    $colors: (
+        'primary': $primary,
+        'accent': $accent,
+        'token-string-expression': $token-string-expression,
+        'token-function': $token-function,
+        'token-constant': $token-constant,
+        'token-comment': $token-comment,
+    );
+    $formatted-prefix: if($prefix, #{$prefix}-, '');
+
+    @if $type == null {
+        // Page
+        @include defaultColor(
+            $formatted-prefix,
+            'background-color',
+            $background-color,
+            $mode,
+            (
+                'Light': $defaultLightBackgroundColor,
+                'Dark': $defaultDarkBackgroundColor,
+            )
+        );
+
+        @include defaultColor(
+            $formatted-prefix,
+            'color',
+            $color,
+            $mode,
+            (
+                'Light': #242424,
+                'Dark': #d4d4d4,
+            )
+        );
+
+        @include defaultColor(
+            $formatted-prefix,
+            'muted',
+            $muted,
+            $mode,
+            (
+                'Light': #757575,
+                'Dark': #878787,
+            )
+        );
+
+        @include defaultColor(
+            $formatted-prefix,
+            'text-shadow-color',
+            $text-shadow-color,
+            $mode,
+            (
+                'Light': #dfdfdf,
+                'Dark': #505050,
+            )
+        );
+
+        @each $name, $color in $colors {
+            --#{$formatted-prefix}#{$name}: #{$color};
+            --#{$formatted-prefix}#{$name}-string: '#{$color}';
+
+            @each $label, $value in $gradients {
+                @if $mode == 'Light' {
+                    $bg-mix: if(
+                        $background-color,
+                        $background-color,
+                        $defaultLightBackgroundColor
+                    );
+                    $color-mixed: mix($bg-mix, $color, $value);
+
+                    --#{$formatted-prefix}#{$name}-#{$label}: #{$color-mixed};
+                } @else if $mode == 'Dark' {
+                    $bg-mix: if(
+                        $background-color,
+                        $background-color,
+                        $defaultDarkBackgroundColor
+                    );
+                    $color-mixed: mix($bg-mix, $color, $value);
+
+                    --#{$formatted-prefix}#{$name}-#{$label}: #{$color-mixed};
+                }
+            }
+
+            @if $mode == 'Light' {
+                --#{$formatted-prefix}#{$name}-variant: #{mix(
+                        white,
+                        $color,
+                        10%
+                    )};
+            } @else if $mode == 'Dark' {
+                --#{$formatted-prefix}#{$name}-variant: #{mix(
+                        black,
+                        $color,
+                        10%
+                    )};
+            }
+        }
+
+        // Code block word highLights
+        @if $mode == 'Light' {
+            --#{$formatted-prefix}word-background-color: #ffdcc2;
+            --#{$formatted-prefix}r-word-background-color: #ffc2d3;
+            --#{$formatted-prefix}g-word-background-color: #c2ffce;
+            --#{$formatted-prefix}b-word-background-color: #c2efff;
+        } @else if $mode == 'Dark' {
+            --#{$formatted-prefix}word-background-color: #63341d;
+            --#{$formatted-prefix}r-word-background-color: #9f1239;
+            --#{$formatted-prefix}g-word-background-color: #115e59;
+            --#{$formatted-prefix}b-word-background-color: #1e40af;
+        }
+    }
+}
+
+@mixin set-theme($prefix, $mode, $color) {
+    @include create-theme(
+        $type: null,
+        $prefix: $prefix,
+        $mode: $mode,
+        $primary: map.get($themes, $mode, $color, 'primary'),
+        $token-string-expression:
+            map.get($themes, $mode, $color, 'token-string-expression'),
+        $token-function: map.get($themes, $mode, $color, 'token-function'),
+        $token-constant: map.get($themes, $mode, $color, 'token-constant'),
+        $token-comment: map.get($themes, $mode, $color, 'token-comment'),
+        $accent: map.get($themes, $mode, $color, 'accent'),
+        $background-color: map.get($themes, $mode, $color, 'background-color'),
+        $color: map.get($themes, $mode, $color, 'color'),
+        $muted: map.get($themes, $mode, $color, 'muted'),
+        $text-shadow-color: map.get($themes, $mode, $color, 'text-shadow-color')
+    );
+}
+
+@mixin init-themes() {
+    --line-height: #{$line-height};
+    --font-size: #{$font-size};
+    --offset: #{$offset};
+    --p-line-height-modifier: #{$p-line-height-modifier};
+    --page-padding: #{$page-padding};
+    --page-gap: #{$page-gap};
+    --small-width: #{$small-width};
+    --medium-width: #{$medium-width};
+    --large-width: #{$large-width};
+    --max-width: #{$max-width};
+    --border-radius: #{$border-radius};
+    --icon-size: calc(var(--font-size) + 4px);
+    --prefers-color-scheme-transition-speed: 250ms;
+
+    @include set-theme(null, $defaultMode, $default);
+}

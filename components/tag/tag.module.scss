@@ -1,0 +1,24 @@
+.tag {
+    cursor: pointer;
+    color: var(--muted);
+
+    &:hover {
+        .name {
+            color: var(--primary);
+        }
+    }
+
+    &.selected {
+        .name {
+            color: var(--primary);
+        }
+    }
+
+    .name {
+        color: var(--muted);
+    }
+
+    .spacer {
+        color: var(--muted);
+    }
+}
