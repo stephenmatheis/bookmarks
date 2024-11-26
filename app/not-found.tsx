@@ -1,4 +1,4 @@
-import { LinkCtr } from '@/components/link-ctr';
+import Link from 'next/link';
 
 export default function NotFound() {
     return (
@@ -14,7 +14,7 @@ export default function NotFound() {
                 <h1 style={{ textAlign: 'center', margin: 0 }}>
                     404 - Page not found
                 </h1>
-                <LinkCtr href="/">Go back to Home</LinkCtr>
+                <Link href="/">Go back to Home</Link>
             </div>
         </div>
     );

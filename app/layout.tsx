@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
-import '@/styles/styles.scss';
+import '@/styles/app.scss';
 
 export const metadata: Metadata = {
     title: {
-        template: 'Stephen Matheis | %s',
-        default: 'Stephen Matheis',
+        template: 'Bookmarks | %s',
+        default: 'Bookmarks',
     },
-    description: 'My blog, portfolio, and resume.',
+    description: 'Bookmarks',
     viewport: 'width=device-width, initial-scale=1,  viewport-fit=cover',
     icons: {
         shortcut: '/favicon.ico',
