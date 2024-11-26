@@ -1,73 +1,84 @@
+import fs from 'fs';
 import { createWriteStream } from 'fs';
 import { chromium } from 'playwright';
-import urls from './urls.json' with { type: 'json' };
+import csvParser from 'csv-parser';
 
-// Log colors
-const colors = {
-    // Reset
-    Reset: '\x1b[0m',
+// Configurations
+const MAX_CONCURRENT_BROWSERS = 8; // Adjust as needed
+const INPUT_CSV = './urls.csv'; // Path to the input CSV
+const OUTPUT_LOG = `./logs/${new Date().toISOString()}.csv`;
 
-    // Terminal
-    Bright: '\x1b[1m',
-    Dim: '\x1b[2m',
-    Underscore: '\x1b[4m',
-    Blink: '\x1b[5m',
-    Reverse: '\x1b[7m',
-    Hidden: '\x1b[8m',
-
-    // Foreground
-    FgBlack: '\x1b[30m',
-    FgRed: '\x1b[31m',
-    FgGreen: '\x1b[32m',
-    FgYellow: '\x1b[33m',
-    FgBlue: '\x1b[34m',
-    FgMagenta: '\x1b[35m',
-    FgCyan: '\x1b[36m',
-    FgWhite: '\x1b[37m',
-    FgGray: '\x1b[90m',
-
-    // Background
-    BgBlack: '\x1b[40m',
-    BgRed: '\x1b[41m',
-    BgGreen: '\x1b[42m',
-    BgYellow: '\x1b[43m',
-    BgBlue: '\x1b[44m',
-    BgMagenta: '\x1b[45m',
-    BgCyan: '\x1b[46m',
-    BgWhite: '\x1b[47m',
-    BgGray: '\x1b[100m',
-};
-const browser = await chromium.launch();
-const context = await browser.newContext();
-const page = await context.newPage();
-const fileName = `./logs/${new Date().toISOString()}.csv`;
-const stream = createWriteStream(fileName, { flags: 'a' });
-
+// Create write stream for logging
+const stream = createWriteStream(OUTPUT_LOG, { flags: 'a' });
 stream.write(`index,url,status,notes\n`);
 
-console.log(`\nURLS: ${urls.length}\n\n`)
+console.log(`\nReading URLs from ${INPUT_CSV}...\n`);
 
-for (let [_, item] of urls.entries()) {
-    const { id, url } = item;
+// Function to read URLs from CSV
+async function readUrlsFromCsv(filePath) {
+    return new Promise((resolve, reject) => {
+        const urls = [];
+        fs.createReadStream(filePath)
+            .pipe(csvParser())
+            .on('data', (row) => {
+                const url = row.url || Object.values(row)[0];
+
+                if (url) urls.push(url);
+            })
+            .on('end', () => resolve(urls))
+            .on('error', (error) => reject(error));
+    });
+}
+
+// Function to process a single URL
+async function processUrl(browser, url, index) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
 
     try {
-        // Desktop
-        await page.setViewportSize({
-            width: 1920,
-            height: 1080,
-        });
-        await page.goto(url);
-        await page.screenshot({ path: `./public/screenshots/${id}-desktop.png` });
+        await page.setViewportSize({ width: 1920, height: 1080 });
+        await page.goto(url, { timeout: 30000 });
+        await page.screenshot({ path: `./public/screenshots/${index}-desktop.png` });
 
-        writeLog('success', `${id},${url},success,desktop`);
+        writeLog('success', `${index},${url},success,desktop`);
     } catch (error) {
-        writeLog('fail', `${id},${url},failed,"${csvify(error.message)}"`);
+        writeLog('fail', `${index},${url},failed,"${csvify(error.message)}"`);
+    } finally {
+        await context.close();
     }
 }
 
-await context.close();
-await browser.close();
+// Function to process URLs in batches
+async function processBatch(batch, batchIndex) {
+    const browser = await chromium.launch();
 
+    await Promise.all(
+        batch.map((url, index) => processUrl(browser, url, batchIndex * MAX_CONCURRENT_BROWSERS + index))
+    );
+
+    await browser.close();
+}
+
+// Main execution
+(async () => {
+    const urls = await readUrlsFromCsv(INPUT_CSV);
+    console.log(`Processing ${urls.length} URLs with ${MAX_CONCURRENT_BROWSERS} workers.`);
+
+    const batches = Array.from(
+        { length: Math.ceil(urls.length / MAX_CONCURRENT_BROWSERS) },
+        (_, i) => urls.slice(i * MAX_CONCURRENT_BROWSERS, (i + 1) * MAX_CONCURRENT_BROWSERS)
+    );
+
+    for (const [batchIndex, batch] of batches.entries()) {
+        console.log(`Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} URLs)...`);
+        await processBatch(batch, batchIndex);
+    }
+
+    console.log('All batches processed.');
+    stream.end();
+})();
+
+// Helper functions
 function writeLog(label, text, msg) {
     console.log(getLabel(label), text, (msg || ''));
     stream.write(`${text}\n`);
@@ -75,29 +86,25 @@ function writeLog(label, text, msg) {
 
 function getLabel(label) {
     switch (label) {
-        case 'info':
-            return info();
-        case 'success':
-            return success();
-        case 'fail':
-            return fail();
-        default:
-            return '';
+        case 'info': return info();
+        case 'success': return success();
+        case 'fail': return fail();
+        default: return '';
     }
 }
 
 function csvify(text) {
-    return text ? text.replaceAll('[2m', '').replaceAll('[22m', '').replaceAll('"', '""') : '';
+    return text ? text.replace(/"/g, '""') : '';
 }
 
 function success() {
-    return `${colors.FgGreen}✔${colors.Reset}`;
+    return `\x1b[32m✔\x1b[0m`;
 }
 
 function fail() {
-    return `${colors.FgRed}✖${colors.Reset}`;
+    return `\x1b[31m✖\x1b[0m`;
 }
 
 function info() {
-    return `${colors.FgCyan}ℹ${colors.Reset}`;
+    return `\x1b[36mℹ\x1b[0m`;
 }

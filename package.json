@@ -10,12 +10,15 @@
         "start": "next start",
         "lint": "next lint",
         "clean": "rm -rf .next",
-        "crawl": "NODE_OPTIONS=\"--no-warnings\" node ./screenshots-alt.js",
-        "format": "NODE_OPTIONS=\"--no-warnings\" node ./scripts/format.js"
+        "crawl": "NODE_OPTIONS=\"--no-warnings\" node ./main.js",
+        "docker:build": "docker build -t bookmarks .",
+        "docker:run": "dotenv -- docker run -d --rm -v $SCREENSHOT_PATH:/app/public/screenshots -v $LOGS_PATH:/app/logs playwright-screenshots",
+        "docker:all": "npm run docker:build && npm run docker:run"
     },
     "dependencies": {
         "@playwright/browser-chromium": "^1.49.0",
         "classnames": "^2.5.1",
+        "csv-parser": "^3.0.0",
         "eslint": "^8.57.1",
         "next": "^14.2.18",
         "playwright": "^1.49.0",
@@ -27,6 +30,7 @@
         "@types/node": "^20.17.8",
         "@types/react": "^18.3.12",
         "@types/react-dom": "^18.3.1",
+        "dotenv-cli": "^7.4.4",
         "eslint-config-next": "^14.2.18",
         "sass": "^1.81.0",
         "tsx": "^3.14.0",
