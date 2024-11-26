@@ -1,6 +1,6 @@
 import { createWriteStream } from 'fs';
 import { chromium } from 'playwright';
-import urls from '../urls.json' with { type: 'json' };
+import urls from './urls.json' with { type: 'json' };
 
 // Log colors
 const colors = {

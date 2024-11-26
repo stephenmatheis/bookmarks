@@ -10,7 +10,8 @@
         "start": "next start",
         "lint": "next lint",
         "clean": "rm -rf .next",
-        "crawl": "NODE_OPTIONS=\"--no-warnings\" node ./scripts/screenshots-alt.js"
+        "crawl": "NODE_OPTIONS=\"--no-warnings\" node ./screenshots-alt.js",
+        "format": "NODE_OPTIONS=\"--no-warnings\" node ./scripts/format.js"
     },
     "dependencies": {
         "@playwright/browser-chromium": "^1.49.0",

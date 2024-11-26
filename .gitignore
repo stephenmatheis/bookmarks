@@ -36,11 +36,7 @@ yarn-error.log*
 /playwright/.cache/
 
 # bookmarks
-/csv
 /logs
-/public/images
-/screenshots
-
-# data
-*.db
-*.csv
+/public/screenshots
+urls.csv
+urls.json
