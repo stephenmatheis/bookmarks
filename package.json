@@ -9,7 +9,8 @@
         "build-static": "next build && next export",
         "start": "next start",
         "lint": "next lint",
-        "clean": "rm -rf .next"
+        "clean": "rm -rf .next",
+        "crawl": "NODE_OPTIONS=\"--no-warnings\" node ./scripts/screenshots-alt.js"
     },
     "dependencies": {
         "@playwright/browser-chromium": "^1.44.1",
