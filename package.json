@@ -12,7 +12,7 @@
         "clean": "rm -rf .next",
         "crawl": "NODE_OPTIONS=\"--no-warnings\" node ./main.js",
         "docker:build": "docker build -t bookmarks .",
-        "docker:run": "dotenv -- docker run -d --rm -v $SCREENSHOT_PATH:/app/public/screenshots -v $LOGS_PATH:/app/logs playwright-screenshots",
+        "docker:run": "docker run -v $(pwd)/public/screenshots:/app/public/screenshots -v $(pwd)/logs:/app/logs bookmarks",
         "docker:all": "npm run docker:build && npm run docker:run"
     },
     "dependencies": {
@@ -21,6 +21,7 @@
         "csv-parser": "^3.0.0",
         "eslint": "^8.57.1",
         "next": "^14.2.18",
+        "node-notifier": "^10.0.1",
         "playwright": "^1.49.0",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",

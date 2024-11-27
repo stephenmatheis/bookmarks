@@ -1,18 +1,76 @@
 import fs from 'fs';
+import path from 'path';
 import { createWriteStream } from 'fs';
 import { chromium } from 'playwright';
 import csvParser from 'csv-parser';
+import notifier from 'node-notifier';
 
-// Configurations
-const MAX_CONCURRENT_BROWSERS = 8; // Adjust as needed
-const INPUT_CSV = './urls.csv'; // Path to the input CSV
-const OUTPUT_LOG = `./logs/${new Date().toISOString()}.csv`;
+// config
+const MAX_CONCURRENT_BROWSERS = 8;
+const INPUT_CSV = './urls.csv';
+const LOGS_DIR = './logs';
+const SCREENSHOTS_DIR = './public/screenshots';
+const NEW_LOG_FILE = `./logs/${new Date().toISOString()}.csv`;
 
-// Create write stream for logging
-const stream = createWriteStream(OUTPUT_LOG, { flags: 'a' });
-stream.write(`index,url,status,notes\n`);
+// new log
+const logStream = createWriteStream(NEW_LOG_FILE, { flags: 'a' });
 
-console.log(`\nReading URLs from ${INPUT_CSV}...\n`);
+logStream.write(`index,url,status,notes\n`);
+
+function getLastLogFile() {
+    if (!fs.existsSync(LOGS_DIR)) return null;
+
+    const files = fs.readdirSync(LOGS_DIR)
+        .filter(file => file.endsWith('.csv'))
+        .map(file => path.join(LOGS_DIR, file))
+        .sort((a, b) => fs.statSync(b).mtime - fs.statSync(a).mtime);
+
+    return files.length > 0 ? files[0] : null;
+}
+
+function getLastProcessedIndexFromLog(logFile) {
+    const lines = fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean);
+
+    if (lines.length < 2) return null;
+
+    const lastLine = lines[lines.length - 1];
+    const [index] = lastLine.split(',');
+
+    return parseInt(index, 10);
+}
+
+function getLastProcessedIndexFromScreenshots() {
+    if (!fs.existsSync(SCREENSHOTS_DIR)) return null;
+
+    const files = fs.readdirSync(SCREENSHOTS_DIR)
+        .filter(file => file.endsWith('-desktop.png'))
+        .map(file => parseInt(file.split('-')[0], 10))
+        .filter(Number.isFinite);
+
+    return files.length > 0 ? Math.max(...files) : null;
+}
+
+function getStartIndex() {
+    const lastLogFile = getLastLogFile();
+
+    if (lastLogFile) {
+        console.log(`Found log file: ${lastLogFile}`);
+
+        const indexFromLog = getLastProcessedIndexFromLog(lastLogFile);
+
+        if (indexFromLog !== null) return indexFromLog + 1;
+    }
+
+    const indexFromScreenshots = getLastProcessedIndexFromScreenshots();
+
+    if (indexFromScreenshots !== null) {
+        console.log(`Found last screenshot at index ${indexFromScreenshots}`);
+
+        return indexFromScreenshots + 1;
+    }
+
+    return 0;
+}
 
 // Function to read URLs from CSV
 async function readUrlsFromCsv(filePath) {
@@ -21,13 +79,19 @@ async function readUrlsFromCsv(filePath) {
         fs.createReadStream(filePath)
             .pipe(csvParser())
             .on('data', (row) => {
-                const url = row.url || Object.values(row)[0];
-
+                const url = row.url || Object.values(row)[0]; // Fallback for no header
                 if (url) urls.push(url);
             })
             .on('end', () => resolve(urls))
             .on('error', (error) => reject(error));
     });
+}
+
+// Function to write logs
+function writeLog(index, url, status, notes = '') {
+    const logEntry = `${index},${url},${status},"${notes.replace(/"/g, '""')}"\n`;
+    logStream.write(logEntry);
+    console.log(`${status === 'success' ? '✔' : '✖'} Logged: ${logEntry.trim()}`);
 }
 
 // Function to process a single URL
@@ -38,73 +102,51 @@ async function processUrl(browser, url, index) {
     try {
         await page.setViewportSize({ width: 1920, height: 1080 });
         await page.goto(url, { timeout: 30000 });
-        await page.screenshot({ path: `./public/screenshots/${index}-desktop.png` });
-
-        writeLog('success', `${index},${url},success,desktop`);
+        await page.screenshot({ path: `${SCREENSHOTS_DIR}/${index}-desktop.png` });
+        writeLog(index, url, 'success', 'desktop');
     } catch (error) {
-        writeLog('fail', `${index},${url},failed,"${csvify(error.message)}"`);
+        writeLog(index, url, 'fail', error.message);
     } finally {
         await context.close();
     }
 }
 
 // Function to process URLs in batches
-async function processBatch(batch, batchIndex) {
+async function processBatch(batch, batchIndex, startIndex) {
     const browser = await chromium.launch();
-
     await Promise.all(
-        batch.map((url, index) => processUrl(browser, url, batchIndex * MAX_CONCURRENT_BROWSERS + index))
+        batch.map((url, index) => {
+            const absoluteIndex = batchIndex * MAX_CONCURRENT_BROWSERS + index + startIndex;
+            return processUrl(browser, url, absoluteIndex);
+        })
     );
-
     await browser.close();
 }
 
 // Main execution
 (async () => {
     const urls = await readUrlsFromCsv(INPUT_CSV);
-    console.log(`Processing ${urls.length} URLs with ${MAX_CONCURRENT_BROWSERS} workers.`);
+    const startIndex = getStartIndex();
+
+    console.log(`Resuming from index ${startIndex}`);
+    const remainingUrls = urls.slice(startIndex);
 
     const batches = Array.from(
-        { length: Math.ceil(urls.length / MAX_CONCURRENT_BROWSERS) },
-        (_, i) => urls.slice(i * MAX_CONCURRENT_BROWSERS, (i + 1) * MAX_CONCURRENT_BROWSERS)
+        { length: Math.ceil(remainingUrls.length / MAX_CONCURRENT_BROWSERS) },
+        (_, i) => remainingUrls.slice(i * MAX_CONCURRENT_BROWSERS, (i + 1) * MAX_CONCURRENT_BROWSERS)
     );
 
     for (const [batchIndex, batch] of batches.entries()) {
-        console.log(`Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} URLs)...`);
-        await processBatch(batch, batchIndex);
+        console.log(`Processing batch ${batchIndex + 1} of ${batches.length}`);
+        await processBatch(batch, batchIndex, startIndex);
     }
 
     console.log('All batches processed.');
-    stream.end();
+    logStream.end();
+
+    // Notify on completion
+    notifier.notify({
+        title: 'Bookmarks',
+        message: 'Done!',
+    });
 })();
-
-// Helper functions
-function writeLog(label, text, msg) {
-    console.log(getLabel(label), text, (msg || ''));
-    stream.write(`${text}\n`);
-}
-
-function getLabel(label) {
-    switch (label) {
-        case 'info': return info();
-        case 'success': return success();
-        case 'fail': return fail();
-        default: return '';
-    }
-}
-
-function csvify(text) {
-    return text ? text.replace(/"/g, '""') : '';
-}
-
-function success() {
-    return `\x1b[32m✔\x1b[0m`;
-}
-
-function fail() {
-    return `\x1b[31m✖\x1b[0m`;
-}
-
-function info() {
-    return `\x1b[36mℹ\x1b[0m`;
-}
