@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import { exec } from 'child_process';
 import { createWriteStream } from 'fs';
 import { chromium } from 'playwright';
 import csvParser from 'csv-parser';
-import notifier from 'node-notifier';
 
 // config
 const MAX_CONCURRENT_BROWSERS = 8;
@@ -144,9 +144,17 @@ async function processBatch(batch, batchIndex, startIndex) {
     console.log('All batches processed.');
     logStream.end();
 
-    // Notify on completion
-    notifier.notify({
-        title: 'Bookmarks',
-        message: 'Done!',
-    });
+    notify('The script has completed successfully!');
 })();
+
+function notify(message) {
+    const platform = process.platform;
+
+    if (platform === 'darwin') {
+        exec(`osascript -e 'display notification "${message}" with title "Bookmarks"'`);
+    } else if (platform === 'linux') {
+        exec(`notify-send "Playwright Screenshots" "${message}"`);
+    } else if (platform.startsWith('win')) {
+        console.log('Windows support needs a notification tool!');
+    }
+}
