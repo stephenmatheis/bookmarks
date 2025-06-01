@@ -148,6 +148,7 @@ async function takeScreenshots(urls: string[]) {
     const suffix = IS_MOBILE ? 'mobile' : 'desktop';
     const totalStart = Date.now();
     const batchUrls = urls.map((url, index) => ({ url, index })).slice(startIndex);
+    const allResults: PromiseSettledResult<ScreenshotResult>[] = [];
 
     for (let i = 0; i < batchUrls.length; i += MAX_CONCURRENT) {
         if (shouldExit) break;
@@ -166,6 +167,8 @@ async function takeScreenshots(urls: string[]) {
         });
 
         const results = await Promise.allSettled(tasks);
+        allResults.push(...results);
+
         const total = results.length;
         const passed = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
         const failed = total - passed;
@@ -190,6 +193,17 @@ async function takeScreenshots(urls: string[]) {
 
     const totalEnd = Date.now();
     const totalSeconds = ((totalEnd - totalStart) / 1000).toFixed(2);
+    const successful = allResults.filter(
+        (result): result is PromiseFulfilledResult<ScreenshotResult> =>
+            result.status === 'fulfilled' && result.value.success
+    );
+    const failed = allResults.length - successful.length;
+
+    console.log(`Total saved: ${chalk.greenBright(`${successful.length}`)}`);
+
+    if (failed > 0) {
+        console.log(`Total failed: ${chalk.redBright(`${failed}`)}`);
+    }
 
     console.log(`\n${chalk.greenBright(`Done.`)} ${chalk.blueBright(`Time: ${totalSeconds}s`)}\n`);
 }
