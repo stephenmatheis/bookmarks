@@ -2,7 +2,15 @@ import fs from 'fs';
 import { Browser, chromium, devices } from 'playwright';
 import csvParser from 'csv-parser';
 import path from 'path';
+import chalk from 'chalk';
 
+type ScreenshotResult = {
+    index: number;
+    url: string;
+    success: boolean;
+};
+
+const MAX_CONCURRENT = 10;
 const INPUT_CSV = './urls.csv';
 const LOG_DIR = './logs';
 const OUTPUT_DIR = './screenshots';
@@ -21,10 +29,12 @@ const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 const logPath = path.join(LOG_DIR, `${timestamp}.log`);
 const logStream = fs.createWriteStream(logPath, { flags: 'a' });
 
+let shouldExit = false;
 let browser: Browser | null = null;
 
 function gracefulShutdown(reason = '') {
     console.log(`\nShutting down${reason ? ` due to ${reason}` : ''}...`);
+    shouldExit = true;
 
     Promise.resolve()
         .then(() => (browser ? browser.close() : undefined))
@@ -85,31 +95,26 @@ async function readUrls(file: string): Promise<string[]> {
     });
 }
 
-async function screenshotUrl(
-    context: any,
-    url: string,
-    filename: string,
-    retries = MAX_RETRIES
-): Promise<boolean> {
+async function screenshotUrl(context: any, url: string, filename: string, retries = MAX_RETRIES): Promise<boolean> {
     for (let attempt = 1; attempt <= retries; attempt++) {
         const page = await context.newPage();
 
         try {
-            await page.goto(url, { timeout: 30_000 });
+            await page.goto(url, { timeout: 30000 });
             await page.screenshot({ path: filename });
 
-            console.log(`✅ Saved: ${path.basename(filename)} (${url})`);
-
-            await page.close().catch(() => {});
+            console.log(`${chalk.greenBright('✔️')} Saved: ${url}`);
 
             return true;
         } catch (err) {
-            console.warn(`⚠️ (${attempt}/${retries}) Failed: ${url}`);
-
+            console.warn(`${chalk.yellowBright(`Reattempting (${attempt}/${retries}):`)} ${url}`);
+        } finally {
             await page.close().catch(() => {});
         }
     }
-    console.error(`❌ Gave up: ${url}`);
+
+    console.error(`${chalk.redBright('❌')} Failed: ${url}`);
+
     return false;
 }
 
@@ -126,31 +131,67 @@ function getResumeIndex(): number {
 
     const maxIndex = Math.max(...matching);
 
-    console.log(`🔁 Resuming from index ${maxIndex + 1}`);
+    console.log(chalk.blueBright(`Resuming from index: ${maxIndex + 1}`));
+
     return maxIndex + 1;
 }
 
 async function takeScreenshots(urls: string[]) {
+    console.log(chalk.blueBright(`Taking screenshots of ${urls.length} URLs...\n`));
+
     browser = await chromium.launch();
 
     const context = await browser.newContext(
-        IS_MOBILE
-            ? { ...devices['iPhone 13 Pro'], isMobile: true }
-            : { viewport: { width: 1920, height: 1080 } }
+        IS_MOBILE ? { ...devices['iPhone 13 Pro'], isMobile: true } : { viewport: { width: 1920, height: 1080 } }
     );
     const startIndex = getResumeIndex();
+    const suffix = IS_MOBILE ? 'mobile' : 'desktop';
+    const totalStart = Date.now();
+    const batchUrls = urls.map((url, index) => ({ url, index })).slice(startIndex);
 
-    for (let i = startIndex; i < urls.length; i++) {
-        const url = urls[i];
-        const suffix = IS_MOBILE ? 'mobile' : 'desktop';
-        const filename = path.join(OUTPUT_DIR, `${i}-${suffix}.png`);
+    for (let i = 0; i < batchUrls.length; i += MAX_CONCURRENT) {
+        if (shouldExit) break;
 
-        await screenshotUrl(context, url, filename);
+        const batchStart = Date.now();
+        const batch = batchUrls.slice(i, i + MAX_CONCURRENT);
+        const batchIndex = Math.floor(i / MAX_CONCURRENT) + 1;
+
+        console.log(`Batch ${batchIndex} (${i} - ${Math.min(i + MAX_CONCURRENT - 1, batchUrls.length - 1)})`);
+
+        const tasks = batch.map(async ({ url, index }): Promise<ScreenshotResult> => {
+            const filename = path.join(OUTPUT_DIR, `${index}-${suffix}.png`);
+            const success = await screenshotUrl(context, url, filename);
+
+            return { index, url, success };
+        });
+
+        const results = await Promise.allSettled(tasks);
+        const total = results.length;
+        const passed = results.filter((r) => r.status === 'fulfilled' && r.value.success).length;
+        const failed = total - passed;
+
+        console.log(`\nSaved: ${chalk.greenBright(`${passed}/${MAX_CONCURRENT}`)}`);
+
+        if (failed > 0) {
+            console.warn(`Failed: ${chalk.redBright(`${failed}/${MAX_CONCURRENT}`)}`);
+        }
+
+        const batchEnd = Date.now();
+        const batchSeconds = ((batchEnd - batchStart) / 1000).toFixed(2);
+
+        console.log(chalk.cyanBright(`Time: ${batchSeconds}s\n`));
     }
 
-    await browser.close();
+    if (browser) {
+        await browser.close();
 
-    console.log('✅ Done.');
+        browser = null;
+    }
+
+    const totalEnd = Date.now();
+    const totalSeconds = ((totalEnd - totalStart) / 1000).toFixed(2);
+
+    console.log(`\n${chalk.greenBright(`Done.`)} ${chalk.blueBright(`Time: ${totalSeconds}s`)}\n`);
 }
 
 const urls = await readUrls(INPUT_CSV);
