@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { chromium, devices } from 'playwright';
+import { Browser, chromium, devices } from 'playwright';
 import csvParser from 'csv-parser';
 import path from 'path';
 
@@ -20,6 +20,40 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 const logPath = path.join(LOG_DIR, `${timestamp}.log`);
 const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+
+let browser: Browser | null = null;
+
+function gracefulShutdown(reason = '') {
+    console.log(`\nShutting down${reason ? ` due to ${reason}` : ''}...`);
+
+    Promise.resolve()
+        .then(() => (browser ? browser.close() : undefined))
+        .then(() => {
+            if (browser) console.log('Browser closed.');
+
+            return new Promise((res) =>
+                logStream.end(() => {
+                    console.log('Log file closed.');
+
+                    res(null);
+                })
+            );
+        })
+        .finally(() => process.exit(0));
+}
+
+process.on('SIGINT', () => gracefulShutdown());
+process.on('SIGTERM', () => gracefulShutdown());
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+
+    gracefulShutdown('uncaughtException');
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+
+    gracefulShutdown('unhandledRejection');
+});
 
 function tee(streamFn: (...args: any[]) => void, label: string) {
     return (...args: any[]) => {
@@ -64,30 +98,49 @@ async function screenshotUrl(
             await page.goto(url, { timeout: 30_000 });
             await page.screenshot({ path: filename });
 
-            console.log(`✅ Saved: ${filename}`);
+            console.log(`✅ Saved: ${path.basename(filename)} (${url})`);
 
-            await page.close();
+            await page.close().catch(() => {});
 
             return true;
         } catch (err) {
             console.warn(`⚠️ (${attempt}/${retries}) Failed: ${url}`);
 
-            await page.close();
+            await page.close().catch(() => {});
         }
     }
     console.error(`❌ Gave up: ${url}`);
     return false;
 }
 
+function getResumeIndex(): number {
+    const suffix = IS_MOBILE ? 'mobile' : 'desktop';
+
+    const files = fs.readdirSync(OUTPUT_DIR);
+    const matching = files
+        .filter((f) => f.endsWith(`${suffix}.png`))
+        .map((f) => parseInt(f.split('-')[0], 10))
+        .filter((n) => !isNaN(n));
+
+    if (matching.length === 0) return 0;
+
+    const maxIndex = Math.max(...matching);
+
+    console.log(`🔁 Resuming from index ${maxIndex + 1}`);
+    return maxIndex + 1;
+}
+
 async function takeScreenshots(urls: string[]) {
-    const browser = await chromium.launch();
+    browser = await chromium.launch();
+
     const context = await browser.newContext(
         IS_MOBILE
             ? { ...devices['iPhone 13 Pro'], isMobile: true }
             : { viewport: { width: 1920, height: 1080 } }
     );
+    const startIndex = getResumeIndex();
 
-    for (let i = 0; i < urls.length; i++) {
+    for (let i = startIndex; i < urls.length; i++) {
         const url = urls[i];
         const suffix = IS_MOBILE ? 'mobile' : 'desktop';
         const filename = path.join(OUTPUT_DIR, `${i}-${suffix}.png`);
