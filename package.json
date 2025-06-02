@@ -8,6 +8,7 @@
     },
     "dependencies": {
         "@playwright/browser-chromium": "^1.49.0",
+        "boxen": "^8.0.1",
         "chalk": "^5.4.1",
         "csv-parser": "^3.0.0",
         "playwright": "^1.49.0"
