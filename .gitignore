@@ -1,6 +1,19 @@
+# macOS
+
 .DS_Store
-/logs
+
+# default
 /node_modules
 /data
-/screenshots*
+
 .env
+
+# data
+/screenshots
+
+# frontend
+/frontend/node_modules
+
+# backend
+/backend/node_modules
+/backend/logs
