@@ -1,11 +1,11 @@
-import sql from './db.ts';
+import sql from './db';
 
-const products = await sql`
-    select
-    *
-    from products
-`;
+export default async function Get() {
+    const products = await sql`
+        select
+        *
+        from products
+    `;
 
-console.log(products);
-
-process.exit(0);
+    return products;
+}

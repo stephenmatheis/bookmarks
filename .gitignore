@@ -1,19 +1,2 @@
-# macOS
-
+# misc
 .DS_Store
-
-# default
-/node_modules
-/data
-
-.env
-
-# data
-/screenshots
-
-# frontend
-/frontend/node_modules
-
-# backend
-/backend/node_modules
-/backend/logs

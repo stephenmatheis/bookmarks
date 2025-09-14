@@ -2,7 +2,7 @@ import { access } from 'fs/promises';
 import { chromium } from 'playwright';
 import path from 'path';
 import chalk from 'chalk';
-import urls from '@/../data/formatted.urls';
+import urls from '@/data/urls';
 
 console.log(`\nTaking ${urls.length} screenshots...\n`);
 
