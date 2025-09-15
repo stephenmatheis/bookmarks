@@ -1,3 +1,5 @@
+import sql from '@/lib/db';
+
 export async function GET(request: Request) {
     const { url } = request;
 
@@ -9,26 +11,22 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    const { url } = request;
-
     try {
-        const body = await request.json();
+        const { url, title, timestamp } = await request.json();
 
-        return new Response(
-            JSON.stringify({
-                url,
-                body,
-            }),
-            {
-                status: 200,
-            }
-        );
+        await sql`
+            INSERT into bookmarks
+            VALUES(${url}, ${title}, ${timestamp})       
+        `;
+
+        return new Response(JSON.stringify({ message: 'inserted 1 row into bookmarks' }), {
+            status: 200,
+        });
     } catch (error) {
         console.error(error);
 
         return new Response(
             JSON.stringify({
-                url,
                 message: 'missing body',
             }),
             {
