@@ -1,6 +1,6 @@
 import { readdir } from 'fs/promises';
 
-const files = await readdir('../screenshots');
+const files = await readdir('./screenshots');
 const ids = files.map((file) => parseInt(file.split('-')[0])).sort((a, b) => a - b);
 const missing: number[] = [];
 

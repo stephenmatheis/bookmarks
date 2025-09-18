@@ -1,14 +1,16 @@
 import { writeFile } from 'fs/promises';
-import cloudTabs from '@/data/cloud-tabs';
+import { csvFormat } from 'd3-dsv';
+import urls from '@/data/urls';
 
 writeFile(
-    `./data/cloud-tabs.urls.json`,
-    JSON.stringify(
-        cloudTabs.map((item) => {
+    `./data/bookmarks.csv`,
+    csvFormat(
+        urls.map((item, index) => {
             return {
                 title: item.title,
                 url: item.url,
                 timestamp: new Date(),
+                screenshot: `${index}-fullscreen.png`,
             };
         })
     )

@@ -9,7 +9,7 @@ console.log(`\nTaking ${urls.length} screenshots...\n`);
 const browser = await chromium.launch();
 const context = await browser.newContext();
 
-for (let i = 5675; i < urls.length; i++) {
+for (let i = 5847; i < urls.length; i++) {
     const { url } = urls[i];
     const filename = path.join('./screenshots', `${i}-fullpage.png`);
     const exists = await checkFileExistsAsync(filename);
