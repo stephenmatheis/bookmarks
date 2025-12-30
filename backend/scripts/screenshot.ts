@@ -3,9 +3,12 @@ import { createWriteStream } from 'fs';
 import { chromium, devices } from 'playwright';
 import path from 'path';
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import urls from '@/data/urls.json';
 
-const logStream = createWriteStream('screenshot.log');
+const logStream = createWriteStream(
+    `screenshot-${new Date().toISOString().replaceAll(':', '').replaceAll('.', '_')}.log`
+);
 
 log(`\nTaking ${urls.length} screenshots...\n`);
 
@@ -29,20 +32,20 @@ for (const deviceType of deviceTypes) {
         const exists = await checkFileExistsAsync(filename);
 
         if (exists) {
-            log(`${i},${chalk.cyan('Exists')},${url}`);
+            log(`${i},${chalk.cyan('Exists')},${chalk.cyan(deviceType.name)},${url}`);
 
             continue;
         }
 
         try {
-            log(`${i},${chalk.gray('trying')},${url}`);
+            log(`${i},${chalk.gray('trying')},${chalk.cyan(deviceType.name)},${url}`);
 
             await page.goto(url);
-            await page.screenshot({ path: filename, fullPage: true });
+            await page.screenshot({ path: filename });
 
-            log(`${i},${chalk.green('Succeeded')},${url}`);
+            log(`${i},${chalk.green('Succeeded')},${chalk.cyan(deviceType.name)},${url}`);
         } catch (err) {
-            log(`${i},${chalk.red('Failed')},${url}`);
+            log(`${i},${chalk.red('Failed')},${chalk.cyan(deviceType.name)},${url}`);
         }
     }
 
@@ -60,10 +63,8 @@ async function checkFileExistsAsync(filePath: string) {
 }
 
 function log(msg: string) {
-    const line = msg + '\n';
-
-    console.log(line);
-    logStream.write(line);
+    console.log(msg);
+    logStream.write(stripAnsi(msg.trim() + '\n'));
 }
 
 await browser.close();
