@@ -1,17 +1,9 @@
-import { writeFile } from 'fs/promises';
-import { csvFormat } from 'd3-dsv';
-import urls from '@/data/urls';
+import { readFile, writeFile } from 'fs/promises';
+import { csvParse } from 'd3-dsv';
 
-writeFile(
-    `./data/bookmarks.csv`,
-    csvFormat(
-        urls.map((item, index) => {
-            return {
-                title: item.title,
-                url: item.url,
-                timestamp: new Date(),
-                screenshot: `${index}-fullscreen.png`,
-            };
-        })
-    )
-);
+const urls = await readFile('./data/urls.csv', { encoding: 'utf-8' });
+const json = csvParse(urls);
+
+console.log(json);
+
+writeFile(`./data/urls.json`, JSON.stringify(json));

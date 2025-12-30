@@ -29,7 +29,6 @@ export default defineConfig({
         /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
         trace: 'on-first-retry',
     },
-
     /* Configure projects for major browsers */
     projects: [
         {
@@ -46,26 +45,14 @@ export default defineConfig({
             name: 'webkit',
             use: { ...devices['Desktop Safari'] },
         },
-
-        /* Test against mobile viewports. */
-        // {
-        //   name: 'Mobile Chrome',
-        //   use: { ...devices['Pixel 5'] },
-        // },
-        // {
-        //   name: 'Mobile Safari',
-        //   use: { ...devices['iPhone 12'] },
-        // },
-
-        /* Test against branded browsers. */
-        // {
-        //   name: 'Microsoft Edge',
-        //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-        // },
-        // {
-        //   name: 'Google Chrome',
-        //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-        // },
+        {
+            name: 'Mobile Chrome',
+            use: { ...devices['Pixel 5'] },
+        },
+        {
+            name: 'Mobile Safari',
+            use: { ...devices['iPhone 12'] },
+        },
     ],
 
     /* Run your local dev server before starting the tests */

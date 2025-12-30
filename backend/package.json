@@ -6,6 +6,7 @@
     "scripts": {
         "start": "npx tsx ./scripts/screenshot.ts",
         "format": "npx tsx ./scripts/format.ts",
+        "sort": "npx tsx ./scripts/sort.ts",
         "diff": "npx tsx ./scripts/diff.ts"
     },
     "dependencies": {
@@ -16,6 +17,7 @@
     },
     "devDependencies": {
         "@playwright/test": "^1.55.0",
+        "@types/d3-dsv": "^3.0.7",
         "@types/node": "^24.3.1",
         "tsx": "^4.20.5",
         "typescript": "^5.9.2"

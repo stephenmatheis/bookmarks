@@ -1,40 +1,52 @@
-import { access } from 'fs/promises';
-import { chromium } from 'playwright';
+import { access, mkdir } from 'fs/promises';
+import { createWriteStream } from 'fs';
+import { chromium, devices } from 'playwright';
 import path from 'path';
 import chalk from 'chalk';
-import urls from '@/data/urls';
+import urls from '@/data/urls.json';
 
-console.log(`\nTaking ${urls.length} screenshots...\n`);
+const logStream = createWriteStream('screenshot.log');
+
+log(`\nTaking ${urls.length} screenshots...\n`);
+
+await mkdir('./screenshots', { recursive: true });
 
 const browser = await chromium.launch();
-const context = await browser.newContext();
+const deviceTypes = [
+    { name: 'Desktop', viewport: { width: 1920, height: 1080 } },
+    { name: 'Mobile', ...devices['iPhone 15 Pro Max'] },
+];
 
-for (let i = 5847; i < urls.length; i++) {
-    const { url } = urls[i];
-    const filename = path.join('./screenshots', `${i}-fullpage.png`);
-    const exists = await checkFileExistsAsync(filename);
-
-    if (exists) {
-        console.log(`${i},${chalk.cyan('Exists')},${url}`);
-
-        continue;
-    }
-
+for (const deviceType of deviceTypes) {
+    const context = await browser.newContext({
+        viewport: deviceType.viewport,
+    });
     const page = await context.newPage();
 
-    try {
-        console.log(`${i},${chalk.gray('trying')},${url}`);
+    for (let i = 0; i < 1; i++) {
+        const { url } = urls[i];
+        const filename = path.join('./screenshots', `${i}-${deviceType.name}.png`);
+        const exists = await checkFileExistsAsync(filename);
 
-        // await page.goto(url, { timeout: 5000 });
-        await page.goto(url);
-        await page.screenshot({ path: filename, fullPage: true });
+        if (exists) {
+            log(`${i},${chalk.cyan('Exists')},${url}`);
 
-        console.log(`${i},${chalk.green('Succeeded')},${url}`);
-    } catch (err) {
-        console.log(`${i},${chalk.red('Failed')},${url}`);
-    } finally {
-        await page.close().catch(() => {});
+            continue;
+        }
+
+        try {
+            log(`${i},${chalk.gray('trying')},${url}`);
+
+            await page.goto(url);
+            await page.screenshot({ path: filename, fullPage: true });
+
+            log(`${i},${chalk.green('Succeeded')},${url}`);
+        } catch (err) {
+            log(`${i},${chalk.red('Failed')},${url}`);
+        }
     }
+
+    await context.close();
 }
 
 async function checkFileExistsAsync(filePath: string) {
@@ -47,8 +59,17 @@ async function checkFileExistsAsync(filePath: string) {
     }
 }
 
-browser?.close().catch(() => {});
+function log(msg: string) {
+    const line = msg + '\n';
 
-console.log(`\nDone.\n`);
+    console.log(line);
+    logStream.write(line);
+}
+
+await browser.close();
+
+log(`\nDone.\n`);
+
+logStream.end();
 
 process.exit(0);
