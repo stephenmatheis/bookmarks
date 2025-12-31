@@ -24,9 +24,8 @@ for (const deviceType of deviceTypes) {
     const context = await browser.newContext({
         viewport: deviceType.viewport,
     });
-    const page = await context.newPage();
 
-    for (let i = 0; i < 1; i++) {
+    for (let i = 0; i < urls.length; i++) {
         const { url } = urls[i];
         const filename = path.join('./screenshots', `${i}-${deviceType.name}.png`);
         const exists = await checkFileExistsAsync(filename);
@@ -37,15 +36,21 @@ for (const deviceType of deviceTypes) {
             continue;
         }
 
+        const page = await context.newPage();
+
         try {
-            log(`${i},${chalk.gray('trying')},${chalk.cyan(deviceType.name)},${url}`);
+            // log(`${i},${chalk.gray('trying')},${chalk.cyan(deviceType.name)},${url}`);
 
             await page.goto(url);
             await page.screenshot({ path: filename });
 
             log(`${i},${chalk.green('Succeeded')},${chalk.cyan(deviceType.name)},${url}`);
         } catch (err) {
+            console.log(err);
+
             log(`${i},${chalk.red('Failed')},${chalk.cyan(deviceType.name)},${url}`);
+        } finally {
+            await page.close();
         }
     }
 
