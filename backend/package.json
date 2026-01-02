@@ -7,6 +7,7 @@
         "start": "npx tsx ./scripts/screenshot.ts",
         "format": "npx tsx ./scripts/format.ts",
         "sort": "npx tsx ./scripts/sort.ts",
+        "map": "npx tsx ./scripts/map.ts",
         "diff": "npx tsx ./scripts/diff.ts"
     },
     "dependencies": {
